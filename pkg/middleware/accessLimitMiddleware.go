@@ -3,38 +3,43 @@ package middleware
 import (
 	"net"
 	"net/http"
-	"strconv"
 
-	config "github.com/LucasBelusso1/go-ratelimiter/configs"
 	"github.com/LucasBelusso1/go-ratelimiter/internal/dbstrategy"
 )
 
-func AccessLimitMiddleware(next http.Handler) http.Handler {
+type Middleware struct {
+	Context       *dbstrategy.DbContext
+	Limiters      []Limiter
+	IpLimit       int
+	IpTimeBlocked int
+}
+
+func NewMiddleware(context *dbstrategy.DbContext, limiters []Limiter, ipLimit, ipTimeBlocked int) *Middleware {
+	return &Middleware{Context: context, Limiters: limiters, IpLimit: ipLimit, IpTimeBlocked: ipTimeBlocked}
+}
+
+func (m *Middleware) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		token := r.Header.Get("API_KEY")
-
-		if err != nil {
-			http.Error(w, "IP not found", http.StatusUnauthorized)
-			return
-		}
-
-		redisStrategy := dbstrategy.NewRedisStrategy()
-		dbContext := dbstrategy.NewDbContext(redisStrategy)
-
-		config, err := config.LoadConfig(".")
-
-		if err != nil {
-			http.Error(w, "Error trying to load the server configurations.", http.StatusInternalServerError)
-			return
-		}
-
 		var clientCanAccess bool
+		var err error
+		var limiter Limiter
+		var validateToken bool
 
-		if token != "" {
-			clientCanAccess, err = validateLimitations(dbContext, token, config.TimeForToken, config.TokenLimit)
+		limiter, validateToken = m.ValidateToken(r)
+
+		if validateToken {
+			clientCanAccess, err = limiter.validateLimit()
 		} else {
-			clientCanAccess, err = validateLimitations(dbContext, ip, config.TimeForIp, config.IpLimit)
+			var ip string
+
+			ip, _, err = net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				http.Error(w, "IP not found", http.StatusUnauthorized)
+				return
+			}
+
+			limiter := NewLimiter(m.Context, ip, m.IpTimeBlocked, m.IpLimit)
+			clientCanAccess, err = limiter.validateLimit()
 		}
 
 		if err != nil {
@@ -52,26 +57,13 @@ func AccessLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func validateLimitations(dbContext *dbstrategy.DbContext, field string, timeLimit, requestLimit int) (bool, error) {
-	value := dbContext.GetKey(field)
-
-	if value == "" {
-		dbContext.SetNewKeyWithTimeLimit(field, timeLimit)
-		return true, nil
+func (m *Middleware) ValidateToken(r *http.Request) (Limiter, bool) {
+	token := r.Header.Get("API_KEY")
+	for _, limiter := range m.Limiters {
+		if limiter.Field == token {
+			return limiter, true
+		}
 	}
 
-	currentRequests, err := strconv.Atoi(value)
-
-	if err != nil {
-		return false, err
-	}
-
-	if currentRequests >= requestLimit {
-		return false, nil
-	} else {
-		currentRequests++
-		dbContext.IncrementExistingkey(field, currentRequests)
-	}
-
-	return true, nil
+	return Limiter{}, false
 }
