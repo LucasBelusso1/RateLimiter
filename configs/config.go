@@ -2,14 +2,24 @@ package config
 
 import "github.com/spf13/viper"
 
-type conf struct {
-	IpLimit      int `mapstructure:"REQUEST_LIMIT_FOR_IP"`
-	TimeForIp    int `mapstructure:"TIME_FOR_IP_BLOCKED_IN_SECONDS"`
-	TokenLimit   int `mapstructure:"REQUEST_LIMIT_FOR_TOKEN"`
-	TimeForToken int `mapstructure:"TIME_FOR_TOKEN_BLOCKED_IN_SECONDS"`
+type Conf struct {
+	RedisAddress  string `mapstructure:"REDIS_ADDRESS"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	RedisPort     int    `mapstructure:"REDIS_PORT"`
+
+	IpLimit   int `mapstructure:"IP_LIMIT"`
+	TimeForIp int `mapstructure:"IP_BLOCK_TIME_SECONDS"`
+
+	TokenAName    string `mapstructure:"TOKEN_A_NAME"`
+	TokenALimit   int    `mapstructure:"TOKEN_A_LIMIT"`
+	TimeForTokenA int    `mapstructure:"TOKEN_A_BLOCK_TIME_SECONDS"`
+
+	TokenBName    string `mapstructure:"TOKEN_B_NAME"`
+	TokenBLimit   int    `mapstructure:"TOKEN_B_LIMIT"`
+	TimeForTokenB int    `mapstructure:"TOKEN_B_BLOCK_TIME_SECONDS"`
 }
 
-func LoadConfig(path string) (*conf, error) {
+func LoadConfig(path string) (*Conf, error) {
 	viper.SetConfigName("app_config")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(path)
@@ -22,7 +32,7 @@ func LoadConfig(path string) (*conf, error) {
 		panic(err)
 	}
 
-	var cfg *conf
+	var cfg *Conf
 
 	err = viper.Unmarshal(&cfg)
 
