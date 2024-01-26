@@ -2,6 +2,7 @@ package dbstrategy
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -12,10 +13,10 @@ type RedisStrategy struct {
 	Ctx    context.Context
 }
 
-func NewRedisStrategy() *RedisStrategy {
+func NewRedisStrategy(address, password string, port int) *RedisStrategy {
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
+		Addr:     fmt.Sprintf("%s:%d", address, port),
+		Password: password,
 		DB:       0,
 	})
 	ctx := context.Background()
