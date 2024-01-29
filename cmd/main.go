@@ -13,7 +13,7 @@ func main() {
 	config, err := config.LoadConfig(".")
 
 	if err != nil {
-		log.Fatalf("Couldn't read configurations", err)
+		log.Fatalln("Couldn't read configurations", err)
 		panic(err)
 	}
 
