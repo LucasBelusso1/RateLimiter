@@ -1,4 +1,4 @@
-package middleware
+package limiter
 
 import (
 	"strconv"
@@ -17,7 +17,7 @@ func NewLimiter(Db *dbstrategy.DbContext, field string, timeLimit, requestLimit 
 	return &Limiter{DbContext: Db, Field: field, TimeLimit: timeLimit, RequestLimit: requestLimit}
 }
 
-func (l *Limiter) validateLimit() (bool, error) {
+func (l *Limiter) ValidateLimit() (bool, error) {
 	value := l.DbContext.GetKey(l.Field)
 
 	if value == "" {

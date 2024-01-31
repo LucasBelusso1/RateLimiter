@@ -5,16 +5,17 @@ import (
 	"net/http"
 
 	"github.com/LucasBelusso1/go-ratelimiter/internal/dbstrategy"
+	"github.com/LucasBelusso1/go-ratelimiter/pkg/limiter"
 )
 
 type Middleware struct {
 	Context       *dbstrategy.DbContext
-	Limiters      []Limiter
+	Limiters      []limiter.Limiter
 	IpLimit       int
 	IpTimeBlocked int
 }
 
-func NewMiddleware(context *dbstrategy.DbContext, limiters []Limiter, ipLimit, ipTimeBlocked int) *Middleware {
+func NewMiddleware(context *dbstrategy.DbContext, limiters []limiter.Limiter, ipLimit, ipTimeBlocked int) *Middleware {
 	return &Middleware{Context: context, Limiters: limiters, IpLimit: ipLimit, IpTimeBlocked: ipTimeBlocked}
 }
 
@@ -22,13 +23,13 @@ func (m *Middleware) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var clientCanAccess bool
 		var err error
-		var limiter Limiter
+		var limitValidator limiter.Limiter
 		var validateToken bool
 
-		limiter, validateToken = m.ValidateToken(r)
+		limitValidator, validateToken = m.ValidateToken(r)
 
 		if validateToken {
-			clientCanAccess, err = limiter.validateLimit()
+			clientCanAccess, err = limitValidator.ValidateLimit()
 		} else {
 			var ip string
 
@@ -38,8 +39,8 @@ func (m *Middleware) RateLimitMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			limiter := NewLimiter(m.Context, ip, m.IpTimeBlocked, m.IpLimit)
-			clientCanAccess, err = limiter.validateLimit()
+			limitValidator := limiter.NewLimiter(m.Context, ip, m.IpTimeBlocked, m.IpLimit)
+			clientCanAccess, err = limitValidator.ValidateLimit()
 		}
 
 		if err != nil {
@@ -57,7 +58,7 @@ func (m *Middleware) RateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (m *Middleware) ValidateToken(r *http.Request) (Limiter, bool) {
+func (m *Middleware) ValidateToken(r *http.Request) (limiter.Limiter, bool) {
 	token := r.Header.Get("API_KEY")
 	for _, limiter := range m.Limiters {
 		if limiter.Field == token {
@@ -65,5 +66,5 @@ func (m *Middleware) ValidateToken(r *http.Request) (Limiter, bool) {
 		}
 	}
 
-	return Limiter{}, false
+	return limiter.Limiter{}, false
 }

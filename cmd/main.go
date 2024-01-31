@@ -6,6 +6,7 @@ import (
 
 	config "github.com/LucasBelusso1/go-ratelimiter/configs"
 	"github.com/LucasBelusso1/go-ratelimiter/internal/dbstrategy"
+	"github.com/LucasBelusso1/go-ratelimiter/pkg/limiter"
 	"github.com/LucasBelusso1/go-ratelimiter/pkg/middleware"
 )
 
@@ -36,7 +37,7 @@ func setNewRateLimiter(config *config.Conf) *middleware.Middleware {
 	strategy := dbstrategy.NewRedisStrategy(config.RedisAddress, config.RedisPassword, config.RedisPort)
 	context := dbstrategy.NewDbContext(strategy)
 
-	limiters := []middleware.Limiter{
+	limiters := []limiter.Limiter{
 		{
 			DbContext:    context,
 			Field:        config.TokenAName,
