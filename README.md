@@ -36,3 +36,23 @@ limiters := []limiter.Limiter{
 
 middleware.NewMiddleware(context, limiters, {{IpLimit}}, {{TimeForIp}})
 ```
+
+### How can i test it?
+
+From the repository, with `docker` and `docker compose` installed, you just need to enter inside `/.docker` and run:
+
+```SHELL
+docker compose up -d
+```
+
+It will run a docker container with redis, now you need do go to `/cmd` and run:
+
+```SHELL
+go run main.go
+```
+
+To execute the tests, from `/` run:
+
+```SHELL
+go test ./...
+```
